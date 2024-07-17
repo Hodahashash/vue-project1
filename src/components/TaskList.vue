@@ -11,7 +11,7 @@
           <span  @click="completed(task.id)"><img src="../../public/check.png"></span>
           <div class="content">
 
-            <span class="title">{{ task.name }}</span>
+            <span class="title" :class="{ 'completed-task': task.completed }">{{ task.name }}</span>
             <span class="description " :class="{ 'completed-task': task.completed }">{{ task.description }}</span>
             <!-- <span v-if="task.dueDate"><img src="../../public/calendar.png">{{ task.dueDate }}</span> -->
           </div>
@@ -25,6 +25,40 @@
       <li class="add">
         <button class="add" @click="$emit('openModal')"><img src="../../public/plus.png" > Add Task</button>
       </li>
+    </ul>
+    <!-- filterr -->
+    <div class="filters">
+      <button @click="filterByStatus(true)">Completed</button>
+      <button @click="filterByStatus(false)">Incomplete</button>
+      <button @click="filterByPriority('high')">High Priority</button>
+      <button @click="filterByPriority('medium')">Medium Priority</button>
+      <button @click="filterByPriority('low')">Low Priority</button>
+      <button @click="filterByDueDate('today')">Due Today</button>
+      <button @click="filterByDueDate('thisWeek')">Due This Week</button>
+      <button @click="filterByDueDate('overdue')">Overdue</button>
+      <button @click="clearFilters">Clear Filters</button>
+    </div>
+
+    <ul>
+      <li v-for="task in filteredTasks" :key="task.id">
+        <div class="task-header">
+          <span v-if="task.dueDate" class="due-date"><img src="../../public/calendar.png">{{ task.dueDate }}</span>
+          <span v-if="task.priority" :class="getPriorityClass(task.priority),{ 'completed-task': task.completed }">{{ task.priority }}</span>
+        </div>
+        <div class="container">
+          <span @click="completed(task.id)"><img src="../../public/check.png"></span>
+          <div class="content">
+            <span class="title" :class="{ 'completed-task': task.completed }">{{ task.name }}</span>
+            <span class="description" :class="{ 'completed-task': task.completed }">{{ task.description }}</span>
+          </div>
+        </div>
+        <div class="buttons">
+          <button @click="editTask(task.id)"><img src="../../public/edit.png">Edit</button>
+          <button @click="deleteTask(task.id)"><img src="../../public/bin.png">Delete</button>
+        </div>
+        <EditTask v-if="editingTaskId === task.id" :taskId="task.id" />
+      </li>
+      
     </ul>
   </div>
 </template>
@@ -42,6 +76,7 @@ export default defineComponent({
     const store = useStore()
     const tasks = computed(() => store.getters.allTasks);
     const editingTaskId = ref<number | null>(null)
+    const filter = ref<string | null>(null);
 
     const editTask = (taskId: number) => {
       editingTaskId.value = taskId
@@ -59,13 +94,82 @@ export default defineComponent({
         high: 'priority-high',
       }[priority];
     };
-    return { tasks, editingTaskId, editTask, deleteTask, completed,getPriorityClass }
+    // filter
+    const filterByStatus = (status: boolean) => {
+      filter.value = `status:${status}`;
+    };
+
+    const filterByPriority = (priority: string) => {
+      filter.value = `priority:${priority}`;
+    };
+
+    const filterByDueDate = (dueDate: string) => {
+      filter.value = `dueDate:${dueDate}`;
+    };
+
+    const clearFilters = () => {
+      filter.value = null;
+    };
+    const filteredTasks = computed(() => {
+      if (!filter.value) {
+        return tasks.value;
+      }
+      const [type, value] = filter.value.split(':');
+      switch (type) {
+        case 'status':
+          return store.getters.tasksByStatus(value === 'true');
+        case 'priority':
+          return store.getters.tasksByPriority(value);
+        case 'dueDate':
+          if (value === 'today') return store.getters.tasksDueToday;
+          if (value === 'thisWeek') return store.getters.tasksDueThisWeek;
+          if (value === 'overdue') return store.getters.tasksOverdue;
+          break;
+      }
+      return tasks.value;
+    });
+    return {  tasks,
+      editingTaskId,
+      filter,
+      filteredTasks,
+      editTask,
+      deleteTask,
+      completed,
+      filterByStatus,
+      filterByPriority,
+      filterByDueDate,
+      clearFilters,
+      getPriorityClass, }
   }
 })
 
 </script>
 
 <style scoped>
+
+.filters {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  background-color: #f9f9f9;
+  padding: 10px;
+  border-radius: 5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+.filters button {
+  background-color: #ab42b9;
+  color: #fff;
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  flex: 1;
+  margin: 0 5px;
+  text-align: center;
+}
+.filters button:hover {
+  background-color: #7f3689;
+}
 .tasklist {
   padding: 20px;
 }
@@ -145,6 +249,7 @@ li:last-child {
 
 .completed-task {
   text-decoration: line-through;
+  color: grey;
 }
 
 .title {
