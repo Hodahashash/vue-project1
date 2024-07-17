@@ -5,14 +5,14 @@
       <li v-for="task in tasks" :key="task.id">
         <div class="task-header">
           <span v-if="task.dueDate" class="due-date"><img src="../../public/calendar.png">{{ task.dueDate }}</span>
-          <span v-if="task.priority" class="priority">{{ task.priority }}</span>
+          <span v-if="task.priority" class="priority" :class="getPriorityClass(task.priority)">{{ task.priority }}</span>
         </div>
-        <div class="container">
-          <img src="../../public/check.png" @click="completed(task.id)">
+        <div class="container" >
+          <span  @click="completed(task.id)"><img src="../../public/check.png"></span>
           <div class="content">
 
             <span class="title">{{ task.name }}</span>
-            <span class="description">{{ task.description }}</span>
+            <span class="description " :class="{ 'completed-task': task.completed }">{{ task.description }}</span>
             <!-- <span v-if="task.dueDate"><img src="../../public/calendar.png">{{ task.dueDate }}</span> -->
           </div>
         </div>
@@ -30,7 +30,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref } from 'vue'
+import { computed,defineComponent, ref } from 'vue'
 import { useStore } from 'vuex';
 import EditTask from '../components/EditTask.vue'
 import type { Task } from '@/types/task';
@@ -40,20 +40,26 @@ export default defineComponent({
   components: { EditTask },
   setup() {
     const store = useStore()
-    const tasks = store.getters.allTasks
+    const tasks = computed(() => store.getters.allTasks);
     const editingTaskId = ref<number | null>(null)
 
     const editTask = (taskId: number) => {
       editingTaskId.value = taskId
     }
-    const completed = (taskId: number) =>{
-      
-    }
+    const completed = (taskId: number) => {
+      store.commit('completeTask', taskId);
+    };
     const deleteTask = (taskId: number) => {
-      
-      tasks.value = tasks.value.filter((task: { id: number; }) => task.id!== taskId)
-    }
-    return { tasks, editingTaskId, editTask, deleteTask }
+      store.commit('deleteTask', taskId);
+    };
+    const getPriorityClass = (priority: string) => {
+      return {
+        low: 'priority-low',
+        medium: 'priority-medium',
+        high: 'priority-high',
+      }[priority];
+    };
+    return { tasks, editingTaskId, editTask, deleteTask, completed,getPriorityClass }
   }
 })
 
@@ -105,13 +111,13 @@ li:last-child {
 .priority{
   margin-right: 20px;
 }
-.priority[value="low"]{
+.priority-low {
   color: green;
 }
-.priority[value="medium"]{
+.priority-medium{
   color: #ffae42;
 }
-.priority[value="high"]{
+.priority-high{
   color: red;
 }
 
@@ -135,6 +141,10 @@ li:last-child {
   flex-direction: column;
   align-items: flex-start;
   justify-content: space-between;
+}
+
+.completed-task {
+  text-decoration: line-through;
 }
 
 .title {
