@@ -11,8 +11,14 @@
           <span  @click="completed(task.id)"><img src="../../public/check.png"></span>
           <div class="content">
 
-            <span class="title" :class="{ 'completed-task': task.completed }">{{ task.name }}</span>
-            <span class="description " :class="{ 'completed-task': task.completed }">{{ task.description }}</span>
+            <span class="title" 
+              contenteditable="true"
+              @blur="updateTaskField(task.id, 'name', $event.target.innerText)"
+              :class="{ editable: editingTaskId === task.id , 'completed-task': task.completed}">{{ task.name }}</span>
+            <span class="description" 
+              contenteditable="true"
+              @blur="updateTaskField(task.id, 'description', $event.target.innerText)"
+              :class="{ 'completed-task': task.completed, editable: editingTaskId === task.id }">{{ task.description }}</span>
             <!-- <span v-if="task.dueDate"><img src="../../public/calendar.png">{{ task.dueDate }}</span> -->
           </div>
         </div>
@@ -36,7 +42,7 @@
       <button @click="filterByDueDate('today')">Due Today</button>
       <button @click="filterByDueDate('thisWeek')">Due This Week</button>
       <button @click="filterByDueDate('overdue')">Overdue</button>
-      <button @click="clearFilters">Clear Filters</button>
+      <button class="clear-filters" @click="clearFilters">Clear Filters</button>
     </div>
 
     <ul>
@@ -81,6 +87,13 @@ export default defineComponent({
     const editTask = (taskId: number) => {
       editingTaskId.value = taskId
     }
+    const updateTaskField = (taskId: number, field: string, value: string) => {
+      const task = tasks.value.find((t: Task) => t.id === taskId);
+      if (task) {
+        task[field] = value;
+        store.commit('updateTask', task);
+      }
+    };
     const completed = (taskId: number) => {
       store.commit('completeTask', taskId);
     };
@@ -139,7 +152,10 @@ export default defineComponent({
       filterByPriority,
       filterByDueDate,
       clearFilters,
-      getPriorityClass, }
+      getPriorityClass, 
+      updateTaskField,
+    
+    }
   }
 })
 
@@ -170,6 +186,15 @@ export default defineComponent({
 .filters button:hover {
   background-color: #7f3689;
 }
+.filters .clear-filters {
+  background-color: #ff5722;
+  color: #fff;
+}
+
+.filters .clear-filters:hover {
+  background-color: #e64a19;
+}
+
 .tasklist {
   padding: 20px;
 }
